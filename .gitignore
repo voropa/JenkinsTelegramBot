@@ -1,6 +1,12 @@
 # Compiled class file
 *.class
 
+Telegram.iml
+/target
+/test-output
+.idea
+
+
 # Log file
 *.log
 
