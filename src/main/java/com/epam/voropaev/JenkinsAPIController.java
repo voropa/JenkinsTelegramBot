@@ -26,7 +26,7 @@ public class JenkinsAPIController {
     }
 
     private static JenkinsServer init() throws URISyntaxException {
-        jenkins = new JenkinsServer(new URI("http://10.6.99.14:8081"), "voropa", "ovoro7732");
+        jenkins = new JenkinsServer(new URI("https://10.6.99.14:8443"), "voropa", "ovoro7732");
         return jenkins;
     }
 
@@ -40,11 +40,18 @@ public class JenkinsAPIController {
        return getJenkinsConnectionInstance().getJob(name);
     }
 
+    public  static Job getDefaultJob() throws URISyntaxException, IOException {
+		return getJenkinsConnectionInstance().getJob("GmailAutomationFramework MultiJob");
+	}
+
     public static void buildJobByName(String name) throws URISyntaxException, IOException {
         getJenkinsConnectionInstance().getJob(name).build(true);
     }
 
     public  static void buildDefaultJob() throws URISyntaxException, IOException {
+
         getJenkinsConnectionInstance().getJob("GmailAutomationFramework MultiJob").build(true);
+
+
     }
 }

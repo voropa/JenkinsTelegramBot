@@ -1,12 +1,30 @@
 package com.epam.voropaev;
 
+import com.offbytwo.jenkins.model.Build;
+import com.offbytwo.jenkins.model.BuildWithDetails;
+import com.offbytwo.jenkins.model.JobWithDetails;
 import org.telegram.telegrambots.api.methods.send.SendMessage;
 import org.telegram.telegrambots.api.objects.Update;
 import org.telegram.telegrambots.bots.TelegramLongPollingBot;
 import org.telegram.telegrambots.exceptions.TelegramApiException;
+import java.io.IOException;
+import java.net.URISyntaxException;
 
 public class Bot extends TelegramLongPollingBot {
-    @Override
+
+	private void sendResponceMessage(Update update, String messageText){
+		SendMessage request = new SendMessage();
+		request.setChatId(update.getMessage().getChatId())
+				.setText(messageText);
+		try {
+			execute(request);
+		}
+		catch (TelegramApiException e) {
+			e.printStackTrace();
+		}
+	}
+
+	@Override
     public void onUpdateReceived(Update update) {
         SendMessage request = new SendMessage();
         if(update.hasMessage() && update.getMessage().hasText()) {
@@ -14,23 +32,45 @@ public class Bot extends TelegramLongPollingBot {
             String updateMessageText = update.getMessage().getText();
             switch (updateMessageText){
                 case "/build":
-                    request.setChatId(update.getMessage().getChatId())
-                            .setText("Building project...");
+					JobWithDetails jenkinsJob = null;
+					try {
+						 jenkinsJob = (JobWithDetails) JenkinsAPIController.getDefaultJob();
+						 jenkinsJob.build(true);
+						 if(jenkinsJob.isInQueue()){
+							 sendResponceMessage(update,"Waiting...(in Queue)");
+						 }
+						while (jenkinsJob.isInQueue()) {
+							Thread.sleep(100);
+						}
+						sendResponceMessage(update,"Building project: " + jenkinsJob.getDisplayName() + "...");
+						Build buildByNumber = jenkinsJob.getLastBuild();
+						while (buildByNumber.details().isBuilding()) {
+							Thread.sleep(100);
+						}
+						sendResponceMessage(update,"Build № " + buildByNumber.getNumber() + " has finished.");
+						BuildWithDetails details = buildByNumber.details();
+						sendResponceMessage(update,"BuiltOn: " + details.getBuiltOn());
+						sendResponceMessage(update,"Duration: " + details.getDuration());
+						sendResponceMessage(update,"Result: " + details.getResult());
+						sendResponceMessage(update,"For more details go to: " + details.getUrl());
+					}
+					catch (URISyntaxException e) {
+						e.printStackTrace();
+					}
+					catch (IOException e) {
+						e.printStackTrace();
+					}
+					catch (InterruptedException e) {
+						e.printStackTrace();
+					}
                     break;
                 case "/help":
-                    request.setChatId(update.getMessage().getChatId())
-                            .setText("Hello. Avaliable commands: \n /build");
+                	sendResponceMessage(update,"Hello. Avaliable commands: \n /build");
                     break;
                 default:
-                    request.setChatId(update.getMessage().getChatId())
-                            .setText("Invalid  request. try  again or  see /help");
+					sendResponceMessage(update,"Invalid  request. try  again or  see /help");
                     break;
             }
-        }
-        try {
-            execute(request);
-        } catch (TelegramApiException e) {
-            e.printStackTrace();
         }
     }
 
